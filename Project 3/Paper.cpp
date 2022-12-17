@@ -7,12 +7,12 @@ using namespace std;
 class Alpha {
 private:
 	int Z1, l, N, Q;
-	long double C1, C2,M,y,r1,r2,R;
+	long double C1, C2, c1, c2, M, y, r1, r2, R, I1, I2,t1;
 	const long double e = 1.439967;
     const double u = 931.5;
 	const double h = 197.326980;
 	long double phi1,phi2;
-	long double r = 0.00000000001;
+	long double r = 0.1;
 	long double p;
 
 public:
@@ -21,38 +21,48 @@ public:
 		N = x2;
 		l = x3;
 		Q = x4;
-		long double m1 = (Z1 + N - 4);long double m2 = 4;
-		C1 = 1.28 * pow(m1, 1.0 / 3) - 0.76 + 0.8 * pow(m1, -1.0 / 3) - pow(1.28 * pow(m1, 1.0 / 3) - 0.76 + 0.8 * pow(m1, -1.0 / 3), -1);
-	    C2 = 1.28 * pow(m2, 1.0 / 3) - 0.76 + 0.8 * pow(m2, -1.0 / 3) - pow(1.28 * pow(m2, 1.0 / 3) - 0.76 + 0.8 * pow(m2, -1.0 / 3), -1);
-        M = ((Z1 + N - 4.0) * u * 4.0 * u) / ((Z1 + N - 4) * u + 4.0 * u);
-	    y = 0.9517 * (1 - 1.7826 * pow((N - Z1), 2) / (double)pow((N + Z1), 2));
+		int A1 = (Z1 + N - 1);int A2 = 1;
+		I1 = (N - Z1 - 1) * pow(A1, -1);
+		I2 = -1;
+		r1 = 1.2332 * pow(A1, 1.0 / 3) + 2.8961 * pow(pow(A1, 2.0 / 3), -1) - 0.18688 * pow(A1, 1.0 / 3) * I1;
+		r2 = 1.2332 * pow(A2, 1.0 / 3) + 2.8961 * pow(pow(A2, 2.0 / 3), -1) - 0.18688 * pow(A2, 1.0 / 3) * I2;
+		c1 = r1 * (1 - 7 * pow(2 * pow(r1, 2), -1) - 49 * pow(8 * pow(r1, 4), -1));
+		c2 = r2 * (1 - 7 * pow(2 * pow(r2, 2), -1) - 49 * pow(8 * pow(r2, 4), -1));
+		t1 = 3 / 2 * (1.14) * ((32.65) * I1 - (1.0 / 12) * 0.75789 * (Z1 - 1) * pow(A1, -1.0 / 3) * pow(Q +9.0 / 4 + 32.65 * pow(A1, -1.0 / 3), -1));
+		C1 = c1 + (N / A1) * t1;
+		C2 = c2;
+		R = (C1* C2)/(C1+C2);
+		M = ((Z1 + N - 1) * u * 1 * u) / ((Z1 + N - 1) * u + 1 * u);
+		y = 1.25284 * (1 - 2.345 * pow((N - Z1) / (N + Z1), 2));
 	}
 	long double Vc() {
-		if (r < r1)
-			Z1 * 2 * pow(e, 2) * pow(2 * R, -1) * (3 - pow((double)r / R, 2));
+		if (r < r1+r2)
+		return (Z1-1) * e * pow(2 * (r1+r2), -1) * (3 - pow((double)r / (r1+r2), 2));
 		else
-		return ((Z1-2) *2 * e) / (double)r;
+		return ((Z1-1) * e) / (double)r;
 	}
 	long double Va(){
-		return (pow(h, 2) * l * (l + 0.5)) / double(2 * M * pow(r, 2));
+		return (pow(h, 2) * pow((l +0.5),2)) / double(2 * M * pow(r, 2));
 		
 	}
 	long double Vp() {
 		long double z = r - C1 - C2;
-		if (z > 1.9475) {
-			phi1 = -4.41 * pow(M_E, z / (-0.7176));
-			long double c= 4 * M_PI * y * ((C1 * C2) / (double)(C1 + C2)) * phi1;
-			return c;
+		if (z < 0) {
+			phi1 = -1.7817 + 0.972 * z + 0.143 *pow(z,2) - 0.09 * pow(z, 3);
+			return 4 * M_PI * y * R * phi1;
 		}
-		else if (z > 0 && z <= 1.9745) {
-			phi2 = -1.7817 + 0.927 * z + 0.0169 * pow(z, 2) + -0.05148 * pow(z, 3);
-			long double c= 4 * M_PI * y * ((C1 * C2) / (C1 + C2)) * phi2;
-			return c;
+		else if (0 < z && z < 1.9475) {
+			phi1= -1.7817 + 0.9720 * z + 0.01696 * z * z - 0.05148 * z * z * z;
+			return 4 * M_PI * y * R * phi1;
+		}
+		else if (z > 1.9475) {
+			phi1 = -4.41 * exp(-z / (0.7176));
+			return 4 * M_PI * y * R * phi1;
 		}
 	}
-	long double V(long double x) {
+	long double V(long x) {
 		r = x;
-		return Va()+Vp()+Vc()-Q;
+		return Va() + Vc() + Va() - Q;
 	}
 	void T() {
 		long double c = pow(2 * M * (Vp() + Va() + Vc() - Q), 0.5);
@@ -69,7 +79,7 @@ public:
 
 		
 };
-void root(Alpha I) {
+double root(Alpha I) {
 	double x0, x1, x, f0, f1, f, e;
 	x0 = 1;
 	int step = 1;
@@ -78,7 +88,6 @@ void root(Alpha I) {
 	do {
 		f0 = I.V(x0++);
 		f1 = I.V(x1);
-		cout << f0 << endl;
 	}while (f0 * f1 > 0);
 		do {
 			x = x0 - (x0 - x1) * f0 * pow(f0 - f1, -1);
@@ -94,10 +103,11 @@ void root(Alpha I) {
 			}
 			step = step + 1;
 		} while (fabs(f) > e);
-		cout << x;
-	}
-		int main() {
-			Alpha I(55, 57, 2, 0.823);
-			root(I);
 
-		}
+		return x;
+	}
+int main() {
+	Alpha I(69, 76, 5, 1.741);
+	cout << root(I);
+
+}
